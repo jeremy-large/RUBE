@@ -1,0 +1,36 @@
+{% set setup_data = load_setup_py_data() %}
+
+package:
+  name: rube
+  version: {{ setup_data.version }}
+  platform: linux
+
+source:
+  git_rev: {{ setup_data.version }}
+  git_url: git@github.com:rosroe/RUBE.git
+
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python=3.8
+    - numpy
+    - jax=0.2.25
+    - scikit-learn
+    - tqdm
+    - pandas
+
+test:
+  imports:
+  source_files:
+    - tests/tests.py
+  requires:
+    - pytest
+  commands:
+    - pytest tests/tests.py
+
+about:
+  home:  https://github.com/rosroe/RUBE
+  license:  PROPRIETARY
+  
