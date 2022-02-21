@@ -40,10 +40,8 @@ fits_dir = args.fit_dir or STANDARD_FIT_DIR
 fit_dir = pathlib.Path(fits_dir) / time.strftime("%Y%m%d-%H%M%S")
 os.makedirs(fit_dir)
 
-# TODO: Enhance per-epoch saving to the fit directory
 logging.info(f"Fit directory is at {fit_dir}.")
 
-logging.info(f"Using the {'DunnHumby Complete Journey' if args.dataset == 'dunnhumby' else 'UCI archive, online_retail_II.xlsx'} dataset.\n")
 
 def main():
 

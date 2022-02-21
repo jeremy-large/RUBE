@@ -20,6 +20,7 @@ requirements:
     - scikit-learn
     - tqdm
     - pandas
+    - jupyterlab
 
 test:
   imports:
@@ -31,6 +32,6 @@ test:
     - pytest tests/tests.py
 
 about:
-  home:  https://github.com/rosroe/RUBE
-  license:  PROPRIETARY
+  home:  https://github.com/jeremy-large/RUBE
+  license:  Apache License 2.0
   
