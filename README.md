@@ -1,5 +1,5 @@
 # RUBE
-* Random Utility-Based Embeddings
+* Random Utility-Based Embedding
 
 This code is intended to implement the algorithms in Lanier, Large and Quah (2022).
 
