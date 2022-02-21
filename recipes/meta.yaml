@@ -7,7 +7,7 @@ package:
 
 source:
   git_rev: {{ setup_data.version }}
-  git_url: git@github.com:rosroe/RUBE.git
+  git_url: git@github.com:jeremy-large/RUBE.git
 
 requirements:
   build:
