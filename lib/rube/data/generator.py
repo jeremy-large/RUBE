@@ -8,7 +8,7 @@ import logging
 
 
 class Generator:
-    def __init__(self, data, batch_size, neg_samples, max_quantity, stock_vocab, replace=True, user_vocab_size=None,
+    def __init__(self, data, batch_size, neg_samples, max_quantity, stock_vocab, n_periods, replace=True, user_vocab_size=None,
                  repeat_holdout=1, seed=None, shuffle=False, test_size=0.02):
         self.batch_size = batch_size
         self.neg_samples = neg_samples
@@ -34,6 +34,7 @@ class Generator:
         self.shuffle = shuffle
         self.training_data, self.holdout = self.define_holdout(data)
         self.n_samples = self.training_data['q'].shape[0]
+        self.n_periods = n_periods
         self._index = 0
         if seed is not None:
             np.random.seed(seed)
@@ -47,6 +48,9 @@ class Generator:
     def get_stock_vocab_size(self):
         return len(self.stock_vocab)
 
+    def get_n_periods(self):
+        return self.n_periods
+
     def get_user_vocab_size(self):
         if self.contains_user_data:
             return self.user_vocab_size
@@ -58,21 +62,22 @@ class Generator:
 
     def define_holdout(self, data):
         if self.contains_user_data:
-            q_train, q_test, p_train, p_test, u_train, u_test =\
-                train_test_split(data['q'], data['p'], data['u'], test_size=self.test_size)
+            q_train, q_test, p_train, p_test, t_train, t_test, u_train, u_test =\
+                train_test_split(data['q'], data['p'], data['t'], data['u'], test_size=self.test_size)
         else:
-            q_train, q_test, p_train, p_test = \
-                train_test_split(data['q'], data['p'], test_size=self.test_size)
+            q_train, q_test, p_train, p_test, t_train, t_test = \
+                train_test_split(data['q'], data['p'], data['t'], test_size=self.test_size)
         if self.repeat_holdout > 1:
             logging.info(f'Since repeat holdout was set, generating {self.repeat_holdout} signal sets for every '
                          f'held-out basket')
         q_test = self.batch_signal_set(np.repeat(q_test, self.repeat_holdout, axis=0), randomize=True)
         p_test = np.repeat(p_test, self.repeat_holdout, axis=0).reshape(q_test.shape[0], 1, -1)
+        t_test = np.repeat(t_test, self.repeat_holdout, axis=0).reshape(q_test.shape[0], 1)
         test_target = np.repeat(np.array([1.] + [0. for _ in range(self.neg_samples)]).reshape(1, -1, 1),
                                 q_test.shape[0], axis=0)
 
-        train = {'q': q_train, 'p': p_train}
-        test = {'quantity': q_test, 'prices': p_test}
+        train = {'q': q_train, 'p': p_train, 't': t_train}
+        test = {'quantity': q_test, 'prices': p_test, 'period': t_test}
         if self.contains_user_data:
             train.update({'u': u_train})
             test.update({'users': np.repeat(u_test, self.repeat_holdout, axis=0)})
@@ -92,21 +97,23 @@ class Generator:
         # for this by using q.shape[0] instead of self.batch size after q is defined.
         q = self.batch_signal_set(self.training_data['q'][self._index: self._index + self.batch_size])
         p = self.training_data['p'][self._index: self._index + self.batch_size].reshape(q.shape[0], 1, -1)
+        t = self.training_data['t'][self._index: self._index + self.batch_size].reshape(q.shape[0], 1)
         target = np.repeat(np.array([1.] + [0. for _ in range(self.neg_samples)]).reshape(1, -1, 1),
                            q.shape[0], axis=0)
 
         if self.shuffle:
             # Shuffle so the label is not always the first sample in the batch
             for i in range(q.shape[0]):
-                q[i, :], target[i, :] = shuffle(q[i, :], target[i, :])
+                q[i, :], target[i, :] = shuffle(q[i, :], target[i, :]) # should we not also shuffle prices here?
 
-        if not self.contains_user_data:
-            self._index += self.batch_size
-            return {'quantity': q, 'prices': p}, {'output_1': target}
-        else:
+        x, y = {'quantity': q, 'prices': p, 'period': t}, {'output_1': target}
+        if self.contains_user_data:
             u = self.training_data['u'][self._index: self._index + self.batch_size]
-            self._index += self.batch_size
-            return {'quantity': q, 'prices': p, 'users': u}, {'output_1': target}
+            x['users'] = u
+
+        self._index = self._index + self.batch_size
+        return x, y
+
 
     def batch_signal_set(self, baskets, randomize=False):
         """
@@ -148,11 +155,10 @@ def build_signal_set(basket, key, max_quantity, neg_samples, replace):
     bout = jnp.repeat(basket[None, :], neg_samples + 1, axis=0)
 
     # clear out the positive item from the parts of bout which are to describe negative samples:
-    bout = jax.ops.index_update(bout, jax.ops.index[1:, item_index], 0)
+    bout = bout.at[1:, item_index].set(0)
 
     # assign the new negative items to fake baskets (in a vectorised fashion)
-    bout = jax.ops.index_update(bout,
-                                jax.ops.index[jnp.arange(1, neg_samples + 1), fake_item_idx],
-                                fake_item_quantity)
+    arange = jnp.arange(1, neg_samples + 1)
+    bout = bout.at[arange, fake_item_idx].set(fake_item_quantity)
 
     return bout
