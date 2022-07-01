@@ -6,6 +6,8 @@ from sklearn.preprocessing import LabelEncoder
 
 from rube.data.tokenize import index_words
 
+CENTURY = 5200
+
 
 class RawDataCleaner:
     def __init__(self, raw):
@@ -22,7 +24,7 @@ class RawDataCleaner:
                        stock_vocab_size=2000,
                        user_vocab_size=2000,
                        truncate=True,
-                       period_in_weeks=10000,
+                       period_in_weeks=None,
                        min_visits=0,
                        min_baskets=0,
                        min_average_spend=0):
@@ -34,14 +36,13 @@ class RawDataCleaner:
         :param user_vocab_size: (int) maximum number of users to encode
         :param truncate: (bool) see max_accepted_quantity
         :param period_in_weeks: we have the option of breaking the dataset into periods each of length period_in_weeks.
-                                Setting a default here of 100000 ensure that the default will be one period.
+                                Setting a default here of 5200 to ensure that the default will be one period.
         :param min_visits: minimum number of times a customer must show up in the data set to be included in cleaned data
         :param min_baskets: minimum number of baskets a product must show up in in order to be included in the cleaned data
         :param min_average_spend: minimum average spend of a customer to be included in the cleaned data
         """
-        LONG_PERIOD = 100000
         self.data, self.n_samples, self.stock_vocab, self.n_periods, self.n_users, self.max_seen_q = \
-            transform_data(self.raw_data, stock_vocab_size, user_vocab_size, truncate, period_in_weeks or LONG_PERIOD,
+            transform_data(self.raw_data, stock_vocab_size, user_vocab_size, truncate, period_in_weeks or CENTURY,
                            max_quantity=max_accepted_quantity, min_visits=min_visits, min_baskets=min_baskets,
                            min_average_spend=min_average_spend)
 

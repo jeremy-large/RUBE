@@ -30,18 +30,22 @@ parser.add_argument('--dataset_lines', type=int, default=2000000, help='Number o
 parser.add_argument('--begin_week', type=int, default=0, help='First week number of included data')
 parser.add_argument('--end_week', type=int, default=None, help='Last week number of included data')
 parser.add_argument('--min_visits', type=int, default=0,
-                    help='minimum number of times a customer must show up in the data set to be included in cleaned data')
+                    help='minimum number of times a customer must show up '
+                         'in the dataset to be included in cleaned data')
 parser.add_argument('--min_baskets', type=int, default=0,
-                    help='minimum number of baskets a product must show up in in order to be included in the cleaned data')
+                    help='minimum number of baskets a product must show up in '
+                         'in order to be included in the cleaned data')
 parser.add_argument('--min_average_spend', type=int, default=0,
                     help='minimum average spend of a customer to be included in the cleaned data')
 parser.add_argument('--fit_dir', type=str, default=None, help='Directory in which to perform the fit')
 parser.add_argument("--dataset", choices=['uci'], default='uci', help="pick dataset")
-parser.add_argument('--repeat_holdout', type=int, default=1, help="Generate this many signal sets for every held out basket")
+parser.add_argument('--repeat_holdout', type=int, default=1,
+                    help="Generate this many signal sets for every held out basket")
 parser.add_argument('--holdout_size', type=float, default=1024, help="Proportion of data to hold out")
 parser.add_argument('--step_size', type=float, default=0.01, help="Step size (for Adam optimizer)")
-parser.add_argument('--period_in_weeks', type=int, default=100000,
-                    help="The data can be divided into periods. This is the time in weeks of each period.")
+parser.add_argument('--period_in_weeks', type=int, default=5200,
+                    help="The data can be divided into periods. This is the time in weeks of each period. "
+                         "The default is set to 100 years, so that there is only one period.")
 parser.add_argument('--seed', type=int, default=42, help='Random seed')
 parser.add_argument('--delete_unks', default=False, action='store_true',
                     help='proceed as if purchases of goods that are too rare to track (of UNKS), never happened.')
@@ -69,10 +73,13 @@ def main():
              n_lines=args.dataset_lines, period_in_weeks=args.period_in_weeks,
              min_visits=args.min_visits, min_baskets=args.min_baskets, min_average_spend=args.min_average_spend,
              begin_week=args.begin_week, end_week=args.end_week, max_accepted_quantity=args.max_quantity)
+
     model = RubeJaxModel(stock_vocab_size=dg.get_stock_vocab_size(), embedding_dim=args.K, n_periods=dg.get_n_periods(),
                          user_vocab_size=dg.get_user_vocab_size(), seed=args.seed, step_size=args.step_size)
+
     with open(fit_dir / 'parameters.json', 'w+') as param_file:
         json.dump(vars(args), param_file)
+
     model.training_loop(dg, epochs=args.n_epochs, fit_dir=fit_dir)
 
 
