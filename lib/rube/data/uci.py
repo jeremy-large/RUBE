@@ -1,25 +1,31 @@
-
 import os
 
 import pandas as pd
 import logging
+import datetime
 
 from rube.data import uci_files
 from rube.data.real import RealDataGenerator
 
 
 class UCIGenerator(RealDataGenerator):
-    def import_dataset(self, n_lines=None):
-        return import_data(n_lines)
+    def import_dataset(self, begin_week=0, end_week=None, n_lines=None):
+        return import_data(begin_week=begin_week, end_week=end_week, n_lines=n_lines)
 
 
-def import_data(n_lines):
+def import_data(begin_week=0, end_week=None, n_lines=None):
     df = uci_files.standard_uci_data_access(uci_files.UCI_DATA_DIR)
     # clean data:
     invalids = invalid_series(df)
     data = df[~invalids]
+    data = augment_time(data)
     if n_lines:
         data = data.head(n_lines)
+    if not end_week:
+        end_week = data['Week'].max()
+    logging.info(f"We now remove all data except in weeks {begin_week} to {end_week} of the dataset (inclusive).")
+    end_week += 1
+    data = data[data['Week'].isin(range(begin_week, end_week))]
     return data
 
 
@@ -63,3 +69,14 @@ def invalid_series(datf, local_data_file=None):
     df.to_csv(local_data_file)
     logging.info('Saving a copy to ' + str(local_data_file))
     return df
+
+
+def augment_time(df):
+    df['Hour'] = df.InvoiceDate.dt.hour
+    df['Month'] = df.InvoiceDate.dt.month
+    df['Year'] = df.InvoiceDate.dt.year
+
+    df['Week'] = (df.InvoiceDate - datetime.datetime(1970, 1, 1)).dt.days // 7
+    df['Week'] = df.Week - df.Week.min()
+    return df
+
